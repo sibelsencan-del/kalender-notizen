@@ -709,11 +709,11 @@
 
         // STORAGE
         function saveData() {
-            localStorage.setItem('kalender-data', JSON.stringify(app));
+            localStorage.setItem('kalender-app-v2', JSON.stringify(app));
         }
 
         function loadData() {
-            const stored = localStorage.getItem('kalender-data');
+            const stored = localStorage.getItem('kalender-app-v2');
             if (stored) {
                 const data = JSON.parse(stored);
                 app.events = data.events || [];
