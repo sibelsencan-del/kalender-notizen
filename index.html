@@ -1003,28 +1003,35 @@
         const ASSEMBLY_AI_TOKEN = '60ceae17ec34415088596d2e6feedcd8';
         let mediaRecorder;
         let audioChunks = [];
+        let isRecording = false;
 
         async function startVoiceNote() {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                return;
+            }
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
+                isRecording = true;
 
                 const btn = document.getElementById('voiceNoteBtn');
                 btn.style.opacity = '0.5';
-                btn.textContent = '🔴';
+                btn.textContent = '🛑';
 
                 mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
                 mediaRecorder.onstop = () => processAudioNote();
                 mediaRecorder.start();
-
-                setTimeout(() => mediaRecorder.stop(), 5000);
             } catch (err) {
                 showToast('Mikrofon-Zugriff verweigert', 'error');
             }
         }
 
         async function processAudioNote() {
+            isRecording = false;
             const btn = document.getElementById('voiceNoteBtn');
             btn.style.opacity = '1';
             btn.textContent = '🎤';
@@ -1037,27 +1044,8 @@
             }
         }
 
-        async function startVoiceEvent() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-
-                const btn = document.getElementById('voiceEventBtn');
-                btn.style.opacity = '0.5';
-                btn.textContent = '🔴';
-
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => processAudioEvent();
-                mediaRecorder.start();
-
-                setTimeout(() => mediaRecorder.stop(), 5000);
-            } catch (err) {
-                showToast('Mikrofon-Zugriff verweigert', 'error');
-            }
-        }
-
         async function processAudioEvent() {
+            isRecording = false;
             const btn = document.getElementById('voiceEventBtn');
             btn.style.opacity = '1';
             btn.textContent = '🎤';
