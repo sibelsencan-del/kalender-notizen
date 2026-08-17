@@ -491,6 +491,7 @@
             <div style="display: flex; gap: 8px; margin-bottom: 16px;">
                 <input type="text" id="eventTitle" placeholder="Termin (z.B. Training)" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                 <input type="time" id="eventTime" placeholder="Uhrzeit" style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; width: 100px;">
+                <button class="btn btn-secondary" id="voiceEventBtn" style="padding: 10px 12px; font-size: 18px;">🎤</button>
                 <button class="btn btn-primary" id="addEventBtn" style="padding: 10px 16px;">+ Termin</button>
             </div>
             <div id="eventsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
@@ -509,7 +510,10 @@
     <div class="tab-content" id="notes">
         <div class="notes-section">
             <h3 style="margin-bottom: 12px;">📝 Neue Notiz</h3>
-            <textarea class="note-input" id="noteInput" placeholder="Notiz hinzufügen..."></textarea>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <textarea class="note-input" id="noteInput" placeholder="Notiz hinzufügen..." style="flex: 1; margin: 0;"></textarea>
+                <button class="btn btn-secondary" id="voiceNoteBtn" style="padding: 10px 12px; align-self: flex-start; font-size: 18px;">🎤</button>
+            </div>
             <button class="btn btn-primary" id="saveNoteBtn" style="width: 100%;">Speichern</button>
         </div>
 
@@ -625,6 +629,10 @@
             document.getElementById('eventTitle').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') addEvent();
             });
+
+            // Voice
+            document.getElementById('voiceNoteBtn').addEventListener('click', startVoiceNote);
+            document.getElementById('voiceEventBtn').addEventListener('click', startVoiceEvent);
 
             // Settings
             document.getElementById('exportBtn').addEventListener('click', exportData);
@@ -989,6 +997,119 @@
             setTimeout(() => {
                 toast.remove();
             }, 3000);
+        }
+
+        // Voice Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let isListening = false;
+
+        function startVoiceNote() {
+            if (!SpeechRecognition) {
+                showToast('Spracherkennung wird nicht unterstützt', 'error');
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.continuous = false;
+
+            const btn = document.getElementById('voiceNoteBtn');
+            btn.style.opacity = '0.5';
+            btn.textContent = '🔴';
+            isListening = true;
+
+            recognition.onresult = (event) => {
+                const text = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+
+                document.getElementById('noteInput').value = text;
+                showToast('Notiz erkannt ✓', 'success');
+            };
+
+            recognition.onerror = () => {
+                showToast('Fehler bei Spracherkennung', 'error');
+            };
+
+            recognition.onend = () => {
+                btn.style.opacity = '1';
+                btn.textContent = '🎤';
+                isListening = false;
+            };
+
+            recognition.start();
+        }
+
+        function startVoiceEvent() {
+            if (!SpeechRecognition) {
+                showToast('Spracherkennung wird nicht unterstützt', 'error');
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'de-DE';
+            recognition.continuous = false;
+
+            const btn = document.getElementById('voiceEventBtn');
+            btn.style.opacity = '0.5';
+            btn.textContent = '🔴';
+            isListening = true;
+
+            recognition.onresult = (event) => {
+                const text = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+
+                parseAndCreateEvent(text);
+            };
+
+            recognition.onerror = () => {
+                showToast('Fehler bei Spracherkennung', 'error');
+            };
+
+            recognition.onend = () => {
+                btn.style.opacity = '1';
+                btn.textContent = '🎤';
+                isListening = false;
+            };
+
+            recognition.start();
+        }
+
+        function parseAndCreateEvent(text) {
+            const lowerText = text.toLowerCase();
+
+            // Zeitanalyse
+            let time = '10:00';
+            const timeMatch = text.match(/(\d{1,2}):?(\d{2})?/);
+            if (timeMatch) {
+                const hour = timeMatch[1];
+                const min = timeMatch[2] || '00';
+                time = `${String(hour).padStart(2, '0')}:${min}`;
+            }
+
+            // Termin-Titel (alles außer Datum/Uhrzeit)
+            let title = text.replace(/\d{1,2}[.:]\d{2}/g, '').replace(/morgen|übermorgen|nächste|woche|heute/gi, '').trim();
+            if (!title) title = 'Termin';
+
+            document.getElementById('eventTitle').value = title;
+            document.getElementById('eventTime').value = time;
+
+            // Datum-Analyse
+            const today = new Date();
+            if (lowerText.includes('morgen')) {
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                app.selectedDate = tomorrow;
+            } else if (lowerText.includes('übermorgen')) {
+                const dayAfter = new Date(today);
+                dayAfter.setDate(dayAfter.getDate() + 2);
+                app.selectedDate = dayAfter;
+            }
+
+            updateSelectedDate();
+            showToast(`"${title}" um ${time} hinzugefügt ✓`, 'success');
+            setTimeout(() => addEvent(), 500);
         }
 
         // Utilities
