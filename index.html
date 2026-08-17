@@ -424,6 +424,15 @@
 
             document.getElementById('calendarGrid').innerHTML = html;
             updateSelectedDateDisplay();
+            setVoiceButton();
+        }
+
+        function setVoiceButton() {
+            const btn = document.getElementById('voiceBtn');
+            if (btn && !btn.listener) {
+                btn.addEventListener('click', toggleVoice);
+                btn.listener = true;
+            }
         }
 
         function selectDate(date) {
