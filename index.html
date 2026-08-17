@@ -317,8 +317,10 @@
             <div class="input-group">
                 <input type="text" id="eventTitle" placeholder="Termin (z.B. Training)">
                 <input type="time" id="eventTime">
-                <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤</button>
-                <button class="btn btn-primary" onclick="addEvent()">+</button>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="voice-btn" id="voiceBtn" style="flex: 0;">🎤</button>
+                <button class="btn btn-primary" onclick="addEvent()" style="flex: 1;">+ Termin</button>
             </div>
             <div id="eventsList"></div>
         </div>
@@ -369,6 +371,10 @@
             renderCalendar();
             renderNotes();
             renderEvents();
+
+            // Voice buttons
+            document.getElementById('voiceBtn').addEventListener('click', toggleVoice);
+            document.getElementById('voiceNoteBtn').addEventListener('click', toggleVoiceNote);
         }
 
         function switchTab(tab) {
