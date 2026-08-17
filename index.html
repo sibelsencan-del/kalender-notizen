@@ -461,6 +461,7 @@
 
     <div class="tabs">
         <button class="tab-btn active" data-tab="calendar">Kalender</button>
+        <button class="tab-btn" data-tab="week">Woche</button>
         <button class="tab-btn" data-tab="notes">Notizen</button>
         <button class="tab-btn" data-tab="settings">Einstellungen</button>
     </div>
@@ -496,15 +497,20 @@
         </div>
     </div>
 
+    <!-- WOCHE TAB -->
+    <div class="tab-content" id="week">
+        <div class="notes-section">
+            <h3 style="margin-bottom: 16px;">📅 Termine diese Woche</h3>
+            <div id="weekEventsList"></div>
+        </div>
+    </div>
+
     <!-- NOTIZEN TAB -->
     <div class="tab-content" id="notes">
         <div class="notes-section">
-            <div class="selected-date" id="selectedDate"></div>
+            <h3 style="margin-bottom: 12px;">📝 Neue Notiz</h3>
             <textarea class="note-input" id="noteInput" placeholder="Notiz hinzufügen..."></textarea>
-            <div class="btn-group">
-                <button class="btn btn-primary" id="saveNoteBtn">Speichern</button>
-                <button class="btn btn-secondary" id="clearNoteBtn">Löschen</button>
-            </div>
+            <button class="btn btn-primary" id="saveNoteBtn" style="width: 100%;">Speichern</button>
         </div>
 
         <div class="notes-section" style="margin-top: 16px;">
@@ -578,6 +584,7 @@
             loadData();
             renderCalendar();
             updateSelectedDate();
+            renderWeekEvents();
             setupEventListeners();
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('data:application/javascript,self.oninstall=()=>self.skipWaiting();self.onactivate=()=>self.clients.claim();');
@@ -609,7 +616,9 @@
 
             // Notes
             document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
-            document.getElementById('clearNoteBtn').addEventListener('click', clearNote);
+            document.getElementById('noteInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) saveNote();
+            });
 
             // Events
             document.getElementById('addEventBtn').addEventListener('click', addEvent);
@@ -725,8 +734,6 @@
 
         // Notes
         function loadNoteForDate() {
-            const note = app.data.notes.find(n => isSameDate(new Date(n.date), app.selectedDate));
-            document.getElementById('noteInput').value = note ? note.text : '';
             renderNotesList();
         }
 
@@ -737,37 +744,16 @@
                 return;
             }
 
-            const dateStr = app.selectedDate.toISOString().split('T')[0];
-            const existingIndex = app.data.notes.findIndex(n => n.date === dateStr);
-
-            if (existingIndex >= 0) {
-                app.data.notes[existingIndex].text = text;
-            } else {
-                app.data.notes.push({
-                    id: Date.now(),
-                    date: dateStr,
-                    text: text,
-                    created: new Date().toISOString()
-                });
-            }
+            app.data.notes.push({
+                id: Date.now(),
+                text: text,
+                created: new Date().toISOString()
+            });
 
             saveData();
-            renderCalendar();
+            document.getElementById('noteInput').value = '';
+            renderNotesList();
             showToast('Notiz gespeichert ✓', 'success');
-        }
-
-        function clearNote() {
-            if (!document.getElementById('noteInput').value.trim()) {
-                showToast('Keine Notiz zum Löschen', 'error');
-                return;
-            }
-
-            const dateStr = app.selectedDate.toISOString().split('T')[0];
-            app.data.notes = app.data.notes.filter(n => n.date !== dateStr);
-            saveData();
-            loadNoteForDate();
-            renderCalendar();
-            showToast('Notiz gelöscht', 'success');
         }
 
         function renderNotesList() {
@@ -779,7 +765,7 @@
 
             notesList.innerHTML = app.data.notes.map(note => `
                 <div class="note-card">
-                    <div class="note-card-date">${new Date(note.date).toLocaleDateString('de-DE')}</div>
+                    <div class="note-card-date">${new Date(note.created).toLocaleDateString('de-DE')}</div>
                     <div class="note-card-text">${escapeHtml(note.text)}</div>
                     <button class="note-card-delete" onclick="deleteNote(${note.id})">✕</button>
                 </div>
@@ -819,6 +805,7 @@
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventTime').value = '';
             renderCalendar();
+            renderWeekEvents();
             showToast('Termin hinzugefügt ✓', 'success');
         }
 
@@ -846,7 +833,45 @@
             saveData();
             loadEventsForDate();
             renderCalendar();
+            renderWeekEvents();
             showToast('Termin gelöscht', 'success');
+        }
+
+        // Week View
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function renderWeekEvents() {
+            const weekStart = getWeekStart(new Date());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+
+            const weekEvents = app.data.events.filter(event => {
+                const eventDate = new Date(event.date);
+                return eventDate >= weekStart && eventDate <= weekEnd;
+            }).sort((a, b) => {
+                const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+                if (dateCompare !== 0) return dateCompare;
+                return a.time.localeCompare(b.time);
+            });
+
+            const weekEventsList = document.getElementById('weekEventsList');
+            if (weekEvents.length === 0) {
+                weekEventsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div>Keine Termine diese Woche</div>';
+                return;
+            }
+
+            weekEventsList.innerHTML = weekEvents.map(event => `
+                <div class="note-card">
+                    <div class="note-card-date">${new Date(event.date).toLocaleDateString('de-DE', { weekday: 'short', month: 'short', day: 'numeric' })} um ${event.time}</div>
+                    <div class="note-card-text">${escapeHtml(event.title)}</div>
+                    <button class="note-card-delete" onclick="deleteEvent(${event.id})">✕</button>
+                </div>
+            `).join('');
         }
 
         // Export/Import
