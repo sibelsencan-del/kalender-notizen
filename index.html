@@ -723,12 +723,15 @@
 
         function updateSelectedDate() {
             const dateStr = app.selectedDate.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('selectedDate').textContent = dateStr;
-            document.getElementById('eventDate').textContent = dateStr;
+            if (document.getElementById('eventDate')) {
+                document.getElementById('eventDate').textContent = dateStr;
+            }
             loadNoteForDate();
             loadEventsForDate();
-            document.getElementById('eventTitle').value = '';
-            document.getElementById('eventTime').value = '';
+            const eventTitle = document.getElementById('eventTitle');
+            const eventTime = document.getElementById('eventTime');
+            if (eventTitle) eventTitle.value = '';
+            if (eventTime) eventTime.value = '';
         }
 
         // Notes
