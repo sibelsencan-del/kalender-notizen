@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="Kalender und Notizen App">
+    <title>Kalender & Notizen</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%236366f1' width='180' height='180'/><text x='90' y='110' font-size='80' fill='white' text-anchor='middle' font-weight='bold'>KN</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%236366f1' width='180' height='180'/><text x='90' y='110' font-size='80' fill='white' text-anchor='middle' font-weight='bold'>KN</text></svg>">
+    <link rel="manifest" href="data:application/json,{%22name%22:%22Kalender%20%26%20Notizen%22,%22short_name%22:%22KN%22,%22start_url%22:%22/%22,%22display%22:%22standalone%22,%22background_color%22:%22%23ffffff%22,%22theme_color%22:%22%236366f1%22,%22icons%22:[]}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            padding-bottom: 60px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 0;
+            background: white;
+            border-bottom: 2px solid #e5e7eb;
+            position: sticky;
+            top: 60px;
+            z-index: 90;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+            background: #f3f4f6;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.2s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .calendar {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header h2 {
+            font-size: 18px;
+        }
+
+        .calendar-header button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: 600;
+            color: #666;
+            font-size: 12px;
+            padding: 8px 0;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            padding: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.2s;
+            background: #f9fafb;
+            position: relative;
+        }
+
+        .day:hover {
+            background: #ede9fe;
+        }
+
+        .day.other-month {
+            color: #ccc;
+        }
+
+        .day.today {
+            background: #dbeafe;
+            border-color: #0084ff;
+            font-weight: 600;
+            color: #0084ff;
+        }
+
+        .day.selected {
+            background: #6366f1;
+            color: white;
+            border-color: #6366f1;
+        }
+
+        .day.has-notes::after {
+            content: '•';
+            position: absolute;
+            bottom: 2px;
+            font-size: 20px;
+            color: #f59e0b;
+        }
+
+        .notes-section {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .selected-date {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+        }
+
+        .note-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 8px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .note-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .note-card {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #6366f1;
+            position: relative;
+            padding-right: 36px;
+        }
+
+        .note-card-date {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .note-card-text {
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .note-card-delete {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: transparent;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+        }
+
+        .note-card-delete:hover {
+            color: #ef4444;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 16px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .settings-section {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .settings-group {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .settings-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .settings-group h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .settings-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .export-format {
+            margin-bottom: 8px;
+        }
+
+        .export-format input {
+            margin-right: 8px;
+        }
+
+        .export-format label {
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 25px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            background: #10b981;
+        }
+
+        .toast.error {
+            background: #ef4444;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 20px;
+            }
+
+            .calendar-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .calendar-header button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📅 Kalender & Notizen</h1>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="calendar">Kalender</button>
+        <button class="tab-btn" data-tab="notes">Notizen</button>
+        <button class="tab-btn" data-tab="settings">Einstellungen</button>
+    </div>
+
+    <!-- KALENDER TAB -->
+    <div class="tab-content active" id="calendar">
+        <div class="calendar">
+            <div class="calendar-header">
+                <button id="prevMonth">← Zurück</button>
+                <h2 id="monthYear"></h2>
+                <button id="nextMonth">Weiter →</button>
+            </div>
+            <div class="weekdays">
+                <div class="weekday">Mo</div>
+                <div class="weekday">Di</div>
+                <div class="weekday">Mi</div>
+                <div class="weekday">Do</div>
+                <div class="weekday">Fr</div>
+                <div class="weekday">Sa</div>
+                <div class="weekday">So</div>
+            </div>
+            <div class="days" id="calendar-days"></div>
+        </div>
+    </div>
+
+    <!-- NOTIZEN TAB -->
+    <div class="tab-content" id="notes">
+        <div class="notes-section">
+            <div class="selected-date" id="selectedDate"></div>
+            <textarea class="note-input" id="noteInput" placeholder="Notiz hinzufügen..."></textarea>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="saveNoteBtn">Speichern</button>
+                <button class="btn btn-secondary" id="clearNoteBtn">Löschen</button>
+            </div>
+        </div>
+
+        <div class="notes-section" style="margin-top: 16px;">
+            <h3 style="margin-bottom: 16px;">📝 Alle Notizen</h3>
+            <div class="notes-list" id="notesList"></div>
+        </div>
+    </div>
+
+    <!-- EINSTELLUNGEN TAB -->
+    <div class="tab-content" id="settings">
+        <div class="settings-section">
+            <div class="settings-group">
+                <h3>📤 Daten exportieren</h3>
+                <div class="export-format">
+                    <input type="radio" id="format-json" name="export-format" value="json" checked>
+                    <label for="format-json">JSON (für Backup)</label>
+                </div>
+                <div class="export-format">
+                    <input type="radio" id="format-csv" name="export-format" value="csv">
+                    <label for="format-csv">CSV (für Excel)</label>
+                </div>
+                <button class="btn btn-primary" id="exportBtn" style="margin-top: 12px;">Export herunterladen</button>
+            </div>
+
+            <div class="settings-group">
+                <h3>📥 Daten importieren</h3>
+                <input type="file" id="importFile" accept=".json" style="margin-bottom: 12px;">
+                <button class="btn btn-primary" id="importBtn">Import durchführen</button>
+            </div>
+
+            <div class="settings-group">
+                <h3>⚠️ Daten löschen</h3>
+                <button class="btn btn-danger" id="clearAllBtn">Alle Daten löschen</button>
+            </div>
+
+            <div class="settings-group">
+                <h3>ℹ️ Info</h3>
+                <p style="font-size: 13px; color: #666; line-height: 1.6;">
+                    Kalender & Notizen ist eine PWA. Du kannst diese App zum Homebildschirm hinzufügen für schnellen Zugriff.<br><br>
+                    Alle Daten werden lokal auf deinem Gerät gespeichert.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle"></div>
+            <input type="text" class="modal-input" id="modalInput" placeholder="">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="modalCancelBtn" style="flex: 1;">Abbrechen</button>
+                <button class="btn btn-primary" id="modalConfirmBtn" style="flex: 1;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State
+        let app = {
+            currentDate: new Date(),
+            selectedDate: new Date(),
+            data: {
+                notes: [],
+                events: []
+            }
+        };
+
+        // Initialize
+        function init() {
+            loadData();
+            renderCalendar();
+            updateSelectedDate();
+            setupEventListeners();
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('data:application/javascript,self.oninstall=()=>self.skipWaiting();self.onactivate=()=>self.clients.claim();');
+            }
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.getElementById(e.target.dataset.tab).classList.add('active');
+                });
+            });
+
+            // Calendar
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                app.currentDate.setMonth(app.currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                app.currentDate.setMonth(app.currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            // Notes
+            document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
+            document.getElementById('clearNoteBtn').addEventListener('click', clearNote);
+            document.getElementById('exportBtn').addEventListener('click', exportData);
+            document.getElementById('importBtn').addEventListener('click', importData);
+            document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+
+            // Modal
+            document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+            document.getElementById('modalConfirmBtn').addEventListener('click', confirmModal);
+        }
+
+        // Calendar
+        function renderCalendar() {
+            const year = app.currentDate.getFullYear();
+            const month = app.currentDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+
+            document.getElementById('monthYear').textContent = new Date(year, month).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
+            const daysContainer = document.getElementById('calendar-days');
+            daysContainer.innerHTML = '';
+
+            // Previous month days
+            const prevMonth = new Date(year, month, 0);
+            const daysInPrevMonth = prevMonth.getDate();
+            for (let i = daysInPrevMonth - startDay + 1; i <= daysInPrevMonth; i++) {
+                const dayEl = createDayElement(i, true, new Date(year, month - 1, i));
+                daysContainer.appendChild(dayEl);
+            }
+
+            // Current month days
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayEl = createDayElement(i, false, new Date(year, month, i));
+                daysContainer.appendChild(dayEl);
+            }
+
+            // Next month days
+            for (let i = 1; i <= 42 - daysInMonth - startDay; i++) {
+                const dayEl = createDayElement(i, true, new Date(year, month + 1, i));
+                daysContainer.appendChild(dayEl);
+            }
+        }
+
+        function createDayElement(day, otherMonth, date) {
+            const el = document.createElement('div');
+            el.className = 'day';
+            el.textContent = day;
+
+            if (otherMonth) {
+                el.classList.add('other-month');
+            } else {
+                el.addEventListener('click', () => selectDate(date));
+
+                if (isToday(date)) {
+                    el.classList.add('today');
+                }
+
+                if (isSameDate(date, app.selectedDate)) {
+                    el.classList.add('selected');
+                }
+
+                if (hasNotes(date)) {
+                    el.classList.add('has-notes');
+                }
+            }
+
+            return el;
+        }
+
+        function selectDate(date) {
+            app.selectedDate = new Date(date);
+            renderCalendar();
+            updateSelectedDate();
+            loadNoteForDate();
+        }
+
+        function isToday(date) {
+            const today = new Date();
+            return date.getDate() === today.getDate() &&
+                   date.getMonth() === today.getMonth() &&
+                   date.getFullYear() === today.getFullYear();
+        }
+
+        function isSameDate(d1, d2) {
+            return d1.getDate() === d2.getDate() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getFullYear() === d2.getFullYear();
+        }
+
+        function hasNotes(date) {
+            return app.data.notes.some(note => isSameDate(new Date(note.date), date));
+        }
+
+        function updateSelectedDate() {
+            const dateStr = app.selectedDate.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('selectedDate').textContent = dateStr;
+            loadNoteForDate();
+        }
+
+        // Notes
+        function loadNoteForDate() {
+            const note = app.data.notes.find(n => isSameDate(new Date(n.date), app.selectedDate));
+            document.getElementById('noteInput').value = note ? note.text : '';
+            renderNotesList();
+        }
+
+        function saveNote() {
+            const text = document.getElementById('noteInput').value.trim();
+            if (!text) {
+                showToast('Notiz ist leer', 'error');
+                return;
+            }
+
+            const dateStr = app.selectedDate.toISOString().split('T')[0];
+            const existingIndex = app.data.notes.findIndex(n => n.date === dateStr);
+
+            if (existingIndex >= 0) {
+                app.data.notes[existingIndex].text = text;
+            } else {
+                app.data.notes.push({
+                    id: Date.now(),
+                    date: dateStr,
+                    text: text,
+                    created: new Date().toISOString()
+                });
+            }
+
+            saveData();
+            renderCalendar();
+            showToast('Notiz gespeichert ✓', 'success');
+        }
+
+        function clearNote() {
+            if (!document.getElementById('noteInput').value.trim()) {
+                showToast('Keine Notiz zum Löschen', 'error');
+                return;
+            }
+
+            const dateStr = app.selectedDate.toISOString().split('T')[0];
+            app.data.notes = app.data.notes.filter(n => n.date !== dateStr);
+            saveData();
+            loadNoteForDate();
+            renderCalendar();
+            showToast('Notiz gelöscht', 'success');
+        }
+
+        function renderNotesList() {
+            const notesList = document.getElementById('notesList');
+            if (app.data.notes.length === 0) {
+                notesList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📝</div>Keine Notizen vorhanden</div>';
+                return;
+            }
+
+            notesList.innerHTML = app.data.notes.map(note => `
+                <div class="note-card">
+                    <div class="note-card-date">${new Date(note.date).toLocaleDateString('de-DE')}</div>
+                    <div class="note-card-text">${escapeHtml(note.text)}</div>
+                    <button class="note-card-delete" onclick="deleteNote(${note.id})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteNote(id) {
+            app.data.notes = app.data.notes.filter(n => n.id !== id);
+            saveData();
+            renderNotesList();
+            renderCalendar();
+            loadNoteForDate();
+            showToast('Notiz gelöscht', 'success');
+        }
+
+        // Export/Import
+        function exportData() {
+            const format = document.querySelector('input[name="export-format"]:checked').value;
+            const timestamp = new Date().toISOString().slice(0, 10);
+
+            if (format === 'json') {
+                const json = JSON.stringify(app.data, null, 2);
+                downloadFile(json, `notizen-backup-${timestamp}.json`, 'application/json');
+            } else {
+                let csv = 'Datum,Notiz\n';
+                app.data.notes.forEach(note => {
+                    const date = new Date(note.date).toLocaleDateString('de-DE');
+                    const text = note.text.replace(/"/g, '""');
+                    csv += `"${date}","${text}"\n`;
+                });
+                downloadFile(csv, `notizen-export-${timestamp}.csv`, 'text/csv');
+            }
+
+            showToast('Export erfolgreich ✓', 'success');
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    app.data = imported;
+                    saveData();
+                    renderCalendar();
+                    renderNotesList();
+                    showToast('Import erfolgreich ✓', 'success');
+                    e.target.value = '';
+                } catch (err) {
+                    showToast('Fehler beim Import', 'error');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function clearAllData() {
+            showModal('Bestätigung', 'Alle Daten wirklich löschen? Dies kann nicht rückgängig gemacht werden.', () => {
+                app.data = { notes: [], events: [] };
+                saveData();
+                renderCalendar();
+                renderNotesList();
+                document.getElementById('noteInput').value = '';
+                showToast('Alle Daten gelöscht', 'success');
+            });
+        }
+
+        // Storage
+        function saveData() {
+            localStorage.setItem('kalender-notizen-data', JSON.stringify(app.data));
+        }
+
+        function loadData() {
+            const stored = localStorage.getItem('kalender-notizen-data');
+            if (stored) {
+                app.data = JSON.parse(stored);
+            }
+        }
+
+        // Modal
+        function showModal(title, message, callback) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalInput').value = message;
+            document.getElementById('modalInput').style.display = 'none';
+
+            window.modalCallback = callback;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            window.modalCallback = null;
+        }
+
+        function confirmModal() {
+            if (window.modalCallback) {
+                window.modalCallback();
+            }
+            closeModal();
+        }
+
+        // Toast
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Utilities
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
