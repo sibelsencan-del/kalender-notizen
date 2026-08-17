@@ -1129,9 +1129,6 @@
             let title = text.replace(/\d{1,2}[.:]\d{2}/g, '').replace(/morgen|übermorgen|nächste|woche|heute/gi, '').trim();
             if (!title) title = 'Termin';
 
-            document.getElementById('eventTitle').value = title;
-            document.getElementById('eventTime').value = time;
-
             // Datum-Analyse
             const today = new Date();
             if (lowerText.includes('morgen')) {
@@ -1144,9 +1141,22 @@
                 app.selectedDate = dayAfter;
             }
 
-            updateSelectedDate();
+            // Direkt speichern statt mit setTimeout
+            const dateStr = formatDate(app.selectedDate);
+            app.data.events.push({
+                id: Date.now(),
+                date: dateStr,
+                title: title,
+                time: time,
+                created: new Date().toISOString()
+            });
+
+            saveData();
+            loadEventsForDate();
+            renderCalendar();
+            renderWeekEvents();
+
             showToast(`"${title}" um ${time} hinzugefügt ✓`, 'success');
-            setTimeout(() => addEvent(), 500);
         }
 
         // Utilities
