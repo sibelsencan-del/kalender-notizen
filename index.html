@@ -718,8 +718,7 @@
         }
 
         function hasNotes(date) {
-            return app.data.notes.some(note => isSameDate(new Date(note.date), date)) ||
-                   app.data.events.some(event => isSameDate(new Date(event.date), date));
+            return app.data.events.some(event => isSameDate(new Date(event.date), date));
         }
 
         function updateSelectedDate() {
