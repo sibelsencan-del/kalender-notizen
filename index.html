@@ -1114,34 +1114,20 @@
         }
 
         function parseAndCreateEvent(text) {
-            const lowerText = text.toLowerCase();
-
             // Zeitanalyse
             let time = '10:00';
             const timeMatch = text.match(/(\d{1,2}):?(\d{2})?/);
             if (timeMatch) {
-                const hour = timeMatch[1];
-                const min = timeMatch[2] || '00';
-                time = `${String(hour).padStart(2, '0')}:${min}`;
+                const hour = String(timeMatch[1]).padStart(2, '0');
+                const min = String(timeMatch[2] || '00').padStart(2, '0');
+                time = `${hour}:${min}`;
             }
 
-            // Termin-Titel (alles außer Datum/Uhrzeit)
-            let title = text.replace(/\d{1,2}[.:]\d{2}/g, '').replace(/morgen|übermorgen|nächste|woche|heute/gi, '').trim();
+            // Termin-Titel (nur Text, keine Zahlen/Zeit)
+            let title = text.replace(/\d{1,2}:?\d{2}/g, '').trim();
             if (!title) title = 'Termin';
 
-            // Datum-Analyse
-            const today = new Date();
-            if (lowerText.includes('morgen')) {
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                app.selectedDate = tomorrow;
-            } else if (lowerText.includes('übermorgen')) {
-                const dayAfter = new Date(today);
-                dayAfter.setDate(dayAfter.getDate() + 2);
-                app.selectedDate = dayAfter;
-            }
-
-            // Direkt speichern statt mit setTimeout
+            // Speichern am AKTUELLEN selectedDate (nicht interpretieren)
             const dateStr = formatDate(app.selectedDate);
             app.data.events.push({
                 id: Date.now(),
@@ -1156,7 +1142,7 @@
             renderCalendar();
             renderWeekEvents();
 
-            showToast(`"${title}" um ${time} hinzugefügt ✓`, 'success');
+            showToast(`"${title}" um ${time} ✓`, 'success');
         }
 
         // Utilities
