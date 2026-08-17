@@ -484,6 +484,16 @@
             </div>
             <div class="days" id="calendar-days"></div>
         </div>
+
+        <div class="notes-section" style="margin-top: 16px;">
+            <h3 style="margin-bottom: 12px;">📅 Termine für <span id="eventDate"></span></h3>
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="eventTitle" placeholder="Termin (z.B. Training)" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                <input type="time" id="eventTime" placeholder="Uhrzeit" style="padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; width: 100px;">
+                <button class="btn btn-primary" id="addEventBtn" style="padding: 10px 16px;">+ Termin</button>
+            </div>
+            <div id="eventsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
     </div>
 
     <!-- NOTIZEN TAB -->
@@ -600,6 +610,14 @@
             // Notes
             document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
             document.getElementById('clearNoteBtn').addEventListener('click', clearNote);
+
+            // Events
+            document.getElementById('addEventBtn').addEventListener('click', addEvent);
+            document.getElementById('eventTitle').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addEvent();
+            });
+
+            // Settings
             document.getElementById('exportBtn').addEventListener('click', exportData);
             document.getElementById('importBtn').addEventListener('click', importData);
             document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
@@ -691,13 +709,18 @@
         }
 
         function hasNotes(date) {
-            return app.data.notes.some(note => isSameDate(new Date(note.date), date));
+            return app.data.notes.some(note => isSameDate(new Date(note.date), date)) ||
+                   app.data.events.some(event => isSameDate(new Date(event.date), date));
         }
 
         function updateSelectedDate() {
             const dateStr = app.selectedDate.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             document.getElementById('selectedDate').textContent = dateStr;
+            document.getElementById('eventDate').textContent = dateStr;
             loadNoteForDate();
+            loadEventsForDate();
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventTime').value = '';
         }
 
         // Notes
@@ -770,6 +793,60 @@
             renderCalendar();
             loadNoteForDate();
             showToast('Notiz gelöscht', 'success');
+        }
+
+        // Events
+        function addEvent() {
+            const title = document.getElementById('eventTitle').value.trim();
+            const time = document.getElementById('eventTime').value;
+
+            if (!title) {
+                showToast('Termin-Name erforderlich', 'error');
+                return;
+            }
+
+            const dateStr = app.selectedDate.toISOString().split('T')[0];
+            app.data.events.push({
+                id: Date.now(),
+                date: dateStr,
+                title: title,
+                time: time || '00:00',
+                created: new Date().toISOString()
+            });
+
+            saveData();
+            loadEventsForDate();
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventTime').value = '';
+            renderCalendar();
+            showToast('Termin hinzugefügt ✓', 'success');
+        }
+
+        function loadEventsForDate() {
+            const dateStr = app.selectedDate.toISOString().split('T')[0];
+            const events = app.data.events.filter(e => e.date === dateStr);
+
+            const eventsList = document.getElementById('eventsList');
+            if (events.length === 0) {
+                eventsList.innerHTML = '<div class="empty-state" style="padding: 20px 0;"><div style="font-size: 24px; margin-bottom: 8px;">📅</div>Keine Termine</div>';
+                return;
+            }
+
+            eventsList.innerHTML = events.map(event => `
+                <div class="note-card">
+                    <div class="note-card-date">${event.time}</div>
+                    <div class="note-card-text">${escapeHtml(event.title)}</div>
+                    <button class="note-card-delete" onclick="deleteEvent(${event.id})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteEvent(id) {
+            app.data.events = app.data.events.filter(e => e.id !== id);
+            saveData();
+            loadEventsForDate();
+            renderCalendar();
+            showToast('Termin gelöscht', 'success');
         }
 
         // Export/Import
